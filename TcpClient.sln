@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyTcpClient", "TcpClient\MyTcpClient.csproj", "{C2C57904-D97E-4DD0-88A7-32B964B5EDAE}"
 EndProject
 Global

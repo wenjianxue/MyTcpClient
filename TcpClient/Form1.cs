@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using MyTcpClient.Util;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace MyTcpClient
 {
@@ -22,6 +23,9 @@ namespace MyTcpClient
 
         private TcpClient tclient = null;
 
+        private Thread oThread = null;
+        bool bListen = true;
+
         public Form1()
         {
             InitializeComponent();
@@ -32,8 +36,10 @@ namespace MyTcpClient
             string targetport = config.IniReadValue(TargetSection, TargetPort);
             targetIptextBox.Text = targetIp;
             targetPorttextBox.Text = targetport;
-
             tclient = new TcpClient();
+            oThread = new Thread(new ThreadStart(this.listen));
+            oThread.Start();
+
         }
 
         private void Conectbutton_Click(object sender, EventArgs e)
@@ -45,19 +51,27 @@ namespace MyTcpClient
                 string targetIp = targetIptextBox.Text;
                 string targetport = targetPorttextBox.Text;
                 int intTargetIp = GFConvertHelp.StrToInt(targetport);
-                if (tclient.Connected)
-                {
-                    tclient.Close();
-                    tclient = null;
-                }
-
                 if (null == tclient)
                 {
                     tclient = new TcpClient();
                 }
+                if (tclient.Connected)
+                {
+                    tclient.Close();
+                    tclient = null;
+                    tclient = new TcpClient();
+                }
 
-
-                tclient.Connect(targetIp, intTargetIp);
+                try
+                {
+                    tclient.Connect(targetIp, intTargetIp);
+                }
+                catch(Exception ex)
+                {
+                   
+                    AddStringRecvMsgtextBox(ex.Message);
+                }
+                
 
             }
         }
@@ -93,19 +107,73 @@ namespace MyTcpClient
 
         private void CloseConectbutton_Click(object sender, EventArgs e)
         {
-            tclient.Close();
-            tclient = null;
+            bListen = false;
+            if (tclient != null)
+            {
+                tclient.Close();
+           
+            }
+
         }
 
         private void Sendbutton_Click(object sender, EventArgs e)
         {
-            NetworkStream ns = tclient.GetStream();
+            if (tclient != null && tclient.Connected )
+            {
+                bListen = true;
+                NetworkStream ns = tclient.GetStream();
 
-            String content = SendMsgtextBox.Text;
+                String content = SendMsgtextBox.Text;
 
-            byte[] data = Encoding.Unicode.GetBytes(content);
+                byte[] byteArray = System.Text.Encoding.Default.GetBytes(content);
 
-            ns.Write(data, 0, data.Length); 
+                ns.Write(byteArray, 0, byteArray.Length);
+            }
+            
+            
+        }
+
+        public void listen()
+        {
+            
+             while (bListen)
+             {
+
+                        if (tclient != null && tclient.Connected && tclient.GetStream().CanRead)
+                        {
+                            NetworkStream stream = tclient.GetStream();
+
+                            byte[] myReadBuffer = new byte[1024];
+                            int dasd = tclient.GetStream().Read(myReadBuffer, 0, myReadBuffer.Length);
+                            String sdf = Encoding.Default.GetString(myReadBuffer);
+                            this.SetText(sdf);
+                        }
+            }
+        }
+
+        private void SetText(string text)
+        {
+            // InvokeRequired required compares the thread ID of the
+            // calling thread to the thread ID of the creating thread.
+            // If these threads are different, it returns true.
+            if (this.RecvMsgtextBox.InvokeRequired)
+            {
+                SetTextCallback d = new SetTextCallback(SetText);
+                this.Invoke(d, new object[] { text });
+            }
+            else
+            {
+                AddStringRecvMsgtextBox(text);
+            }
+        }
+
+
+        delegate void SetTextCallback(string text);
+
+        private void AddStringRecvMsgtextBox(string text)
+        {
+            this.RecvMsgtextBox.Text += text;
+            this.RecvMsgtextBox.Text += Environment.NewLine;
         }
     }
 }
